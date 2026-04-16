@@ -1,0 +1,41 @@
+﻿src/app/admin/page.tsx(148,45): error TS2322: Type '(v: "admin" | "user") => void' is not assignable to type '(value: "admin" | "user" | null, eventDetails: SelectRootChangeEventDetails) => void'.
+  Types of parameters 'v' and 'value' are incompatible.
+    Type '"admin" | "user" | null' is not assignable to type '"admin" | "user"'.
+      Type 'null' is not assignable to type '"admin" | "user"'.
+src/app/join/page.tsx(149,100): error TS2322: Type '"9" | "10" | "11" | "12" | "Mezun" | null' is not assignable to type '"9" | "10" | "11" | "12" | "Mezun" | undefined'.
+  Type 'null' is not assignable to type '"9" | "10" | "11" | "12" | "Mezun" | undefined'.
+src/app/join/page.tsx(162,107): error TS2322: Type '"D├╝┼ş├╝k (1-3 Saat)" | "Orta (3-8 Saat)" | "Y├╝ksek (8+ Saat)" | null' is not assignable to type '"D├╝┼ş├╝k (1-3 Saat)" | "Orta (3-8 Saat)" | "Y├╝ksek (8+ Saat)" | undefined'.
+  Type 'null' is not assignable to type '"D├╝┼ş├╝k (1-3 Saat)" | "Orta (3-8 Saat)" | "Y├╝ksek (8+ Saat)" | undefined'.
+src/app/join/page.tsx(213,106): error TS2322: Type '"Instagram" | "E-posta" | "Discord" | "Di─şer" | null' is not assignable to type '"Instagram" | "E-posta" | "Discord" | "Di─şer" | undefined'.
+  Type 'null' is not assignable to type '"Instagram" | "E-posta" | "Discord" | "Di─şer" | undefined'.
+src/app/messages/page.tsx(14,28): error TS2307: Cannot find module '@/components/ui/scroll-area' or its corresponding type declarations.
+src/app/profile/[id]/page.tsx(137,25): error TS2339: Property 'displayName' does not exist on type 'UserProfile'.
+  Property 'displayName' does not exist on type 'TeamProfile'.
+src/app/profile/[id]/page.tsx(139,58): error TS2339: Property 'displayName' does not exist on type 'UserProfile'.
+  Property 'displayName' does not exist on type 'TeamProfile'.
+src/app/profile/[id]/page.tsx(141,76): error TS2339: Property 'grade' does not exist on type 'UserProfile'.
+  Property 'grade' does not exist on type 'TeamProfile'.
+src/app/profile/[id]/page.tsx(142,25): error TS2339: Property 'isActivelyLooking' does not exist on type 'UserProfile'.
+  Property 'isActivelyLooking' does not exist on type 'TeamProfile'.
+src/app/profile/[id]/page.tsx(154,37): error TS2339: Property 'availability' does not exist on type 'UserProfile'.
+  Property 'availability' does not exist on type 'TeamProfile'.
+src/app/profile/[id]/page.tsx(212,27): error TS2339: Property 'interests' does not exist on type 'UserProfile'.
+  Property 'interests' does not exist on type 'TeamProfile'.
+src/app/profile/[id]/page.tsx(213,28): error TS2339: Property 'interests' does not exist on type 'UserProfile'.
+  Property 'interests' does not exist on type 'TeamProfile'.
+src/app/profile/[id]/page.tsx(213,42): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/components/Navbar.tsx(45,12): error TS2552: Cannot find name 'user'. Did you mean 'Users'?
+src/components/UserCard.tsx(34,80): error TS2339: Property 'displayName' does not exist on type 'UserProfile'.
+  Property 'displayName' does not exist on type 'TeamProfile'.
+src/components/UserCard.tsx(35,21): error TS2339: Property 'displayName' does not exist on type 'UserProfile'.
+  Property 'displayName' does not exist on type 'TeamProfile'.
+src/components/UserCard.tsx(39,23): error TS2339: Property 'grade' does not exist on type 'UserProfile'.
+  Property 'grade' does not exist on type 'TeamProfile'.
+src/components/UserCard.tsx(39,43): error TS2339: Property 'grade' does not exist on type 'UserProfile'.
+  Property 'grade' does not exist on type 'TeamProfile'.
+src/components/UserCard.tsx(41,21): error TS2339: Property 'isActivelyLooking' does not exist on type 'UserProfile'.
+  Property 'isActivelyLooking' does not exist on type 'TeamProfile'.
+src/components/UserCard.tsx(76,21): error TS2339: Property 'interests' does not exist on type 'UserProfile'.
+  Property 'interests' does not exist on type 'TeamProfile'.
+src/components/UserCard.tsx(76,48): error TS7006: Parameter 'interest' implicitly has an 'any' type.
+src/components/UserCard.tsx(76,58): error TS7006: Parameter 'i' implicitly has an 'any' type.
