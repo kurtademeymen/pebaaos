@@ -12,6 +12,7 @@ import { FadeInBlock } from "@/components/MotionWrappers";
 import { UserCard } from "@/components/UserCard";
 import { Loader2, Plus, LogOut, CheckCircle2, Clock } from "lucide-react";
 import { auth } from "@/lib/firebase";
+import { sendEmailVerification } from "firebase/auth";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -21,6 +22,8 @@ export default function DashboardPage() {
   const [personal, setPersonal] = useState<PersonalProfile | null>(null);
   const [teams, setTeams] = useState<TeamProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -45,6 +48,21 @@ export default function DashboardPage() {
     setPersonal(res.personal);
     setTeams(res.teams);
     setLoading(false);
+  };
+
+  const handleResendEmail = async () => {
+    if (!auth.currentUser) return;
+    setResendLoading(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 5000);
+    } catch (error) {
+      console.error(error);
+      alert("Mail gönderilirken bir hata oluştu. Lütfen biraz bekleyip tekrar deneyin.");
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   if (authLoading || loading) {
@@ -72,10 +90,17 @@ export default function DashboardPage() {
             <div>
                <h3 className="font-bold text-lg">E-postanız doğrulanmamış!</h3>
                <p className="text-sm">Platformu kullanmaya başlamak için e-posta kutunuza gönderilen doğrulama linkine tıklamanız gerekmektedir.</p>
+               {resendSuccess && <p className="text-sm font-bold text-green-600 mt-1">Doğrulama e-postası tekrar gönderildi!</p>}
             </div>
-            <Button variant="outline" className="border-orange-500 text-orange-700 hover:bg-orange-200 shrink-0" onClick={() => { auth.currentUser?.reload(); window.location.reload(); }}>
-              Doğruladım, Yenile
-            </Button>
+            <div className="flex gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+              <Button variant="outline" className="border-orange-500 text-orange-700 hover:bg-orange-200" onClick={handleResendEmail} disabled={resendLoading || resendSuccess}>
+                {resendLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                {resendSuccess ? "Gönderildi" : "Tekrar Gönder"}
+              </Button>
+              <Button variant="outline" className="border-orange-500 text-orange-700 hover:bg-orange-200" onClick={() => { auth.currentUser?.reload(); window.location.reload(); }}>
+                Doğruladım, Yenile
+              </Button>
+            </div>
           </FadeInBlock>
         )}
 
