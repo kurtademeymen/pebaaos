@@ -12,7 +12,7 @@ import {
   serverTimestamp,
   orderBy
 } from "firebase/firestore";
-import { UserProfile, PersonalProfile, TeamProfile, ReferenceKey } from "@/types";
+import { UserProfile, PersonalProfile, TeamProfile, ReferenceKey, ShowcaseProject, AppNotification } from "@/types";
 
 /**
  * REFERENCE KEYS
@@ -160,7 +160,19 @@ export async function adminApproveProfile(
   status: boolean
 ) {
   const collectionName = type === "personal" ? "personalProfiles" : "teamProfiles";
-  await updateDoc(doc(db, collectionName, profileId), { isApproved: status });
+  const docRef = doc(db, collectionName, profileId);
+  await updateDoc(docRef, { isApproved: status });
+
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    const data = snap.data();
+    await createNotification(data.uid, {
+      title: status ? "Profiliniz Onaylandı" : "Profil Onayınız Kaldırıldı",
+      message: status
+        ? `${type === "personal" ? "Kişisel profiliniz" : "Ekip ilanınız"} onaylandı ve keşfet sayfasında yayınlandı.`
+        : `${type === "personal" ? "Kişisel profiliniz" : "Ekip ilanınız"} incelenmek üzere beklemeye alındı.`
+    });
+  }
 }
 
 export async function adminToggleVisibility(
@@ -211,4 +223,67 @@ export async function hasAnyProfile(uid: string) {
   );
 
   return !personalSnap.empty || !teamSnap.empty;
+}
+
+/**
+ * NOTIFICATIONS
+ */
+export async function createNotification(uid: string, data: { title: string, message: string }) {
+  const docRef = doc(collection(db, "notifications"));
+  await setDoc(docRef, {
+    uid,
+    title: data.title,
+    message: data.message,
+    isRead: false,
+    createdAt: serverTimestamp()
+  });
+}
+
+export async function getUserNotifications(uid: string) {
+  const q = query(
+    collection(db, "notifications"),
+    where("uid", "==", uid),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as AppNotification));
+}
+
+export async function markNotificationAsRead(notificationId: string) {
+  await updateDoc(doc(db, "notifications", notificationId), { isRead: true });
+}
+
+/**
+ * SHOWCASE PROJECTS
+ */
+export async function createProject(data: Omit<ShowcaseProject, "id" | "createdAt">) {
+  const docRef = doc(collection(db, "projects"));
+  const newProject = {
+    ...data,
+    createdAt: serverTimestamp()
+  };
+  await setDoc(docRef, newProject);
+  return { id: docRef.id, ...newProject };
+}
+
+export async function getAllProjects() {
+  const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as ShowcaseProject));
+}
+
+export async function getMyProjects(uid: string) {
+  const q = query(collection(db, "projects"), where("uid", "==", uid), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as ShowcaseProject));
+}
+
+export async function deleteProject(projectId: string) {
+  await deleteDoc(doc(db, "projects", projectId));
+}
+
+export async function getProjectById(projectId: string) {
+  const snap = await getDoc(doc(db, "projects", projectId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as ShowcaseProject;
 }

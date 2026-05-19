@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, ArrowRight, ShieldCheck, Mail, Key } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, getAdditionalUserInfo } from "firebase/auth";
 import { getReferenceKey, markKeyAsUsed } from "@/lib/db";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { FadeInBlock } from "@/components/MotionWrappers";
@@ -17,9 +17,10 @@ export default function AuthPage() {
   const router = useRouter();
   
   // States
-  const [mode, setMode] = useState<"check" | "register" | "login">("check");
+  const [mode, setMode] = useState<"check" | "register" | "login" | "reset">("check");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   
   // Form fields
   const [refCode, setRefCode] = useState("");
@@ -27,13 +28,15 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [validKeyId, setValidKeyId] = useState("");
 
-  // Auto redirect if already logged in
+  const [isAuthFlow, setIsAuthFlow] = useState(false);
+
+  // Auto redirect if already logged in (only if not in active auth flow)
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(user => {
-      if (user) router.push("/dashboard");
+      if (user && !isAuthFlow) router.push("/dashboard");
     });
     return () => unsub();
-  }, [router]);
+  }, [router, isAuthFlow]);
 
   const handleCheckCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,16 +63,17 @@ export default function AuthPage() {
     if (!email || !password || !validKeyId) return;
     setLoading(true);
     setError("");
+    setIsAuthFlow(true);
 
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerification(cred.user);
-      // Mark key as used
       await markKeyAsUsed(validKeyId, cred.user.uid);
-      // Auto redirect triggers via onAuthStateChanged
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Kayıt işlemi başarısız.");
       setLoading(false);
+      setIsAuthFlow(false);
     }
   };
 
@@ -78,12 +82,31 @@ export default function AuthPage() {
     if (!email || !password) return;
     setLoading(true);
     setError("");
+    setIsAuthFlow(true);
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Auto redirect triggers via onAuthStateChanged
+      router.push("/dashboard");
     } catch (err: any) {
       setError("Giriş başarısız. Lütfen bilgilerinizi kontrol edin.");
+      setLoading(false);
+      setIsAuthFlow(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    setError("");
+    setSuccessMsg("");
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setSuccessMsg("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.");
+    } catch (err: any) {
+      setError("Şifre sıfırlama başarısız. Geçerli bir e-posta girdiğinizden emin olun.");
+    } finally {
       setLoading(false);
     }
   };
@@ -91,16 +114,32 @@ export default function AuthPage() {
   const handleGoogleAuth = async () => {
     setLoading(true);
     setError("");
+    setIsAuthFlow(true);
     try {
       const cred = await signInWithPopup(auth, googleProvider);
+      const additionalInfo = getAdditionalUserInfo(cred);
       
-      // If we are in register mode (they provided a key), mark it as used
-      if (mode === "register" && validKeyId) {
-        await markKeyAsUsed(validKeyId, cred.user.uid);
+      if (mode === "login") {
+        if (additionalInfo?.isNewUser) {
+          await cred.user.delete();
+          await auth.signOut();
+          setIsAuthFlow(false);
+          throw new Error("Bu Google hesabıyla ilişkili bir kayıt bulunamadı. Lütfen önce referans koduyla kayıt olun.");
+        }
+      } else if (mode === "register" && validKeyId) {
+        if (additionalInfo?.isNewUser) {
+          await markKeyAsUsed(validKeyId, cred.user.uid);
+        } else {
+          setIsAuthFlow(false);
+          throw new Error("Bu Google hesabıyla zaten kayıtlısınız. Lütfen giriş yapın.");
+        }
       }
+      
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Google ile işlem başarısız oldu.");
       setLoading(false);
+      setIsAuthFlow(false);
     }
   };
 
@@ -122,6 +161,12 @@ export default function AuthPage() {
           {error && (
             <div className="bg-destructive/10 border-l-4 border-destructive text-destructive p-3 rounded-lg mb-6 text-sm">
               {error}
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="bg-green-500/10 border-l-4 border-green-500 text-green-600 p-3 rounded-lg mb-6 text-sm">
+              {successMsg}
             </div>
           )}
 
@@ -201,7 +246,10 @@ export default function AuthPage() {
                    <Input id="emailLogin" type="email" required value={email} onChange={e => setEmail(e.target.value)} className="h-12" />
                  </div>
                  <div className="space-y-2">
-                   <Label htmlFor="passwordLogin">Şifre</Label>
+                   <div className="flex items-center justify-between">
+                     <Label htmlFor="passwordLogin">Şifre</Label>
+                     <button type="button" onClick={() => { setMode("reset"); setError(""); setSuccessMsg(""); }} className="text-xs text-primary hover:underline">Şifremi Unuttum</button>
+                   </div>
                    <Input id="passwordLogin" type="password" required value={password} onChange={e => setPassword(e.target.value)} className="h-12" />
                  </div>
                  <Button type="submit" className="w-full h-12 rounded-full font-bold shadow-lg shadow-primary/20" disabled={loading}>
@@ -222,6 +270,30 @@ export default function AuthPage() {
               <div className="mt-6 text-center">
                  <button type="button" onClick={() => { setMode("check"); setError(""); setRefCode(""); }} className="text-sm text-primary hover:underline">
                    Yeni misin? Davet koduyla gel.
+                 </button>
+              </div>
+            </form>
+          )}
+
+          {mode === "reset" && (
+            <form onSubmit={handleResetPassword} className="space-y-6 relative z-10">
+              <div className="text-center mb-6">
+                 <h2 className="text-2xl font-bold tracking-tight mb-2">Şifre Sıfırlama</h2>
+                 <p className="text-muted-foreground text-sm">Kayıtlı e-posta adresinizi girin, size bir sıfırlama bağlantısı gönderelim.</p>
+              </div>
+              <div className="space-y-4">
+                 <div className="space-y-2">
+                   <Label htmlFor="emailReset">E-posta</Label>
+                   <Input id="emailReset" type="email" required value={email} onChange={e => setEmail(e.target.value)} className="h-12" />
+                 </div>
+                 <Button type="submit" className="w-full h-12 rounded-full font-bold shadow-lg shadow-primary/20" disabled={loading || !email}>
+                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Bağlantı Gönder"}
+                 </Button>
+              </div>
+
+              <div className="mt-6 text-center">
+                 <button type="button" onClick={() => { setMode("login"); setError(""); setSuccessMsg(""); }} className="text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 mx-auto transition-colors">
+                   <ArrowRight className="w-4 h-4 rotate-180" /> Giriş Sayfasına Dön
                  </button>
               </div>
             </form>

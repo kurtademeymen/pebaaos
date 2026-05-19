@@ -21,10 +21,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      
+
       if (currentUser) {
         // Fallback for primary admin email or checks
-        if (currentUser.email === "kurtademeymen@gmail.com") {
+        const superAdmins = [
+          "kurtademeymen@gmail.com",
+          "kurtad.emeymen@gmail.com",
+
+          // İleride buraya virgülle yeni mailler ekleyebilirsin: "digeradmin@gmail.com"
+        ];
+
+        if (currentUser.email && superAdmins.includes(currentUser.email)) {
           setIsAdmin(true);
         } else {
           // Verify if they used an ADMIN reference key
@@ -32,20 +39,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { collection, query, where, getDocs, getFirestore } = await import("firebase/firestore");
             const db = getFirestore();
             const keysQuery = query(
-              collection(db, "referenceKeys"), 
+              collection(db, "referenceKeys"),
               where("usedBy", "==", currentUser.uid),
               where("role", "==", "admin")
             );
             const snapshot = await getDocs(keysQuery);
             setIsAdmin(!snapshot.empty);
-          } catch(err) {
+          } catch (err) {
             setIsAdmin(false);
           }
         }
       } else {
-         setIsAdmin(false);
+        setIsAdmin(false);
       }
-      
+
       setLoading(false);
     });
 

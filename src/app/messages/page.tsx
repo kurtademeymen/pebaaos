@@ -93,8 +93,6 @@ function MessagesApp() {
     }
   };
 
-  if (loading || !user) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8" /></div>;
-
   const activeConvo = conversations.find(c => c.id === activeChatId);
 
   // Mark as read effect
@@ -103,6 +101,8 @@ function MessagesApp() {
       markAsRead(activeChatId, user.uid).catch(console.error);
     }
   }, [user, activeChatId, activeConvo]);
+
+  if (loading || !user) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8" /></div>;
 
   return (
     <div className="flex flex-col h-screen fixed inset-0 w-full overflow-hidden bg-background">

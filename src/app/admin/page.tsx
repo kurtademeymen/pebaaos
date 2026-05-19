@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { logoutAdmin } from "@/lib/auth";
-import { getAllProfiles, adminApproveProfile, adminToggleVisibility, deleteProfile, getAllReferenceKeys, createReferenceKey } from "@/lib/db";
+import { adminApproveProfile, adminToggleVisibility, deleteProfile, createReferenceKey } from "@/lib/db";
 import { PersonalProfile, TeamProfile, ReferenceKey } from "@/types";
+import { onSnapshot, collection, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatsCard } from "@/components/StatsCard";
@@ -27,43 +30,53 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (user && isAdmin) {
-      loadData();
+      setIsLoadingData(true);
+      
+      const qPersonal = query(collection(db, "personalProfiles"), orderBy("createdAt", "desc"));
+      const unsubPersonal = onSnapshot(qPersonal, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PersonalProfile));
+        setPersonalProfiles(data);
+      }, (error) => toast.error("Kişisel profiller dinlenirken hata: " + error.message));
+
+      const qTeam = query(collection(db, "teamProfiles"), orderBy("createdAt", "desc"));
+      const unsubTeam = onSnapshot(qTeam, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamProfile));
+        setTeamProfiles(data);
+      }, (error) => toast.error("Ekip ilanları dinlenirken hata: " + error.message));
+
+      const qKeys = query(collection(db, "referenceKeys"), orderBy("createdAt", "desc"));
+      const unsubKeys = onSnapshot(qKeys, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReferenceKey));
+        setRefKeys(data);
+        setIsLoadingData(false); // Finished initial loading
+      }, (error) => {
+        toast.error("Referans kodları dinlenirken hata: " + error.message);
+        setIsLoadingData(false);
+      });
+
+      return () => {
+        unsubPersonal();
+        unsubTeam();
+        unsubKeys();
+      };
     }
   }, [user, isAdmin]);
-
-  const loadData = async () => {
-    setIsLoadingData(true);
-    try {
-      const [pData, tData, keys] = await Promise.all([
-        getAllProfiles("personal"),
-        getAllProfiles("team"),
-        getAllReferenceKeys()
-      ]);
-      setPersonalProfiles(pData as PersonalProfile[]);
-      setTeamProfiles(tData as TeamProfile[]);
-      setRefKeys(keys);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
 
   const toggleApproval = async (id: string, currentStatus: boolean, type: "personal" | "team") => {
     try {
       await adminApproveProfile(id, type, !currentStatus);
-      loadData();
-    } catch(err) {
-      alert("Hata oluştu");
+      toast.success("Onay durumu güncellendi.");
+    } catch(err: any) {
+      toast.error(err.message || "Onay güncellenirken hata oluştu.");
     }
   };
 
   const toggleVisibility = async (id: string, currentStatus: boolean, type: "personal" | "team") => {
     try {
       await adminToggleVisibility(id, type, !currentStatus);
-      loadData();
-    } catch(err) {
-      alert("Hata oluştu");
+      toast.success("Görünürlük durumu güncellendi.");
+    } catch(err: any) {
+      toast.error(err.message || "Görünürlük güncellenirken hata oluştu.");
     }
   };
 
@@ -71,9 +84,9 @@ export default function AdminPage() {
     if (!confirm("Bu profili/ilanı silmek istediğinize emin misiniz?")) return;
     try {
       await deleteProfile(id, type);
-      loadData();
-    } catch(err) {
-      alert("Silinirken hata oluştu");
+      toast.success("Başarıyla silindi.");
+    } catch(err: any) {
+      toast.error(err.message || "Silinirken hata oluştu.");
     }
   };
 
@@ -81,15 +94,15 @@ export default function AdminPage() {
     if (!user) return;
     try {
       await createReferenceKey(user.uid, keyRole);
-      loadData();
-    } catch (err) {
-      alert("Davet Anahtarı oluşturulamadı.");
+      toast.success("Davet Anahtarı oluşturuldu.");
+    } catch (err: any) {
+      toast.error(err.message || "Davet Anahtarı oluşturulamadı.");
     }
   };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Kopyalandı: " + text);
+    toast.success("Kopyalandı: " + text);
   };
 
   if (authLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;

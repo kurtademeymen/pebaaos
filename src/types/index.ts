@@ -43,3 +43,25 @@ export interface ReferenceKey {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createdAt: any;
 }
+
+export interface ShowcaseProject {
+  id?: string;
+  uid: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  projectUrl?: string;
+  associatedTeamId?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createdAt: any;
+}
+
+export interface AppNotification {
+  id?: string;
+  uid: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createdAt: any;
+}

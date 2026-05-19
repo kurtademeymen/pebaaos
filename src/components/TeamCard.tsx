@@ -47,8 +47,8 @@ export function TeamCard({ team }: { team: TeamProfile }) {
       )}
 
       {team.lookingFor.length > 0 && (
-        <div className="mt-2 p-3 bg-purple-50 rounded-xl space-y-2 border border-purple-100">
-           <p className="text-xs font-semibold text-purple-800 flex items-center gap-1"><Target className="w-3 h-3" /> Aranılan Roller</p>
+        <div className="mt-2 p-3 bg-purple-500/10 rounded-xl space-y-2 border border-purple-500/20">
+           <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1"><Target className="w-3 h-3" /> Aranılan Roller</p>
            <div className="flex flex-wrap gap-1.5">
             {team.lookingFor.slice(0, 3).map((role) => (
               <Tag key={role} text={role} variant="primary" />
@@ -67,9 +67,9 @@ export function TeamCard({ team }: { team: TeamProfile }) {
           <span className="text-sm font-semibold group-hover:text-foreground">{team.contactValue}</span>
         </div>
       </div>
-      <div className="mt-4 border-t pt-4">
+      <div className="mt-4 border-t border-border/40 pt-4">
         <Link href={`/profile/${team.username || team.id}`} passHref className="w-full">
-           <Button variant="outline" className="w-full border-purple-200 text-purple-700 hover:bg-purple-50">İlanı İncele</Button>
+           <Button variant="outline" className="w-full border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10">İlanı İncele</Button>
         </Link>
       </div>
     </div>

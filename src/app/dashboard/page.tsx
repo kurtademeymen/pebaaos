@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { getMyProfiles, deleteProfile } from "@/lib/db";
-import { PersonalProfile, TeamProfile } from "@/types";
+import { getMyProfiles, deleteProfile, getMyProjects, deleteProject } from "@/lib/db";
+import { PersonalProfile, TeamProfile, ShowcaseProject } from "@/types";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export default function DashboardPage() {
   
   const [personal, setPersonal] = useState<PersonalProfile | null>(null);
   const [teams, setTeams] = useState<TeamProfile[]>([]);
+  const [projects, setProjects] = useState<ShowcaseProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
@@ -32,9 +33,10 @@ export default function DashboardPage() {
     }
 
     if (user) {
-      getMyProfiles(user.uid).then((res) => {
-        setPersonal(res.personal);
-        setTeams(res.teams);
+      Promise.all([getMyProfiles(user.uid), getMyProjects(user.uid)]).then(([profRes, projRes]) => {
+        setPersonal(profRes.personal);
+        setTeams(profRes.teams);
+        setProjects(projRes);
         setLoading(false);
       });
     }
@@ -47,6 +49,15 @@ export default function DashboardPage() {
     const res = await getMyProfiles(user!.uid);
     setPersonal(res.personal);
     setTeams(res.teams);
+    setLoading(false);
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    if (!id || !confirm("Projenizi silmek istediğinize emin misiniz?")) return;
+    setLoading(true);
+    await deleteProject(id);
+    const projRes = await getMyProjects(user!.uid);
+    setProjects(projRes);
     setLoading(false);
   };
 
@@ -80,9 +91,16 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold tracking-tight">Hesap Yönetimi</h1>
             <p className="text-muted-foreground mt-1">Hoş geldin, {user.email}</p>
           </div>
-          <Button variant="outline" onClick={() => auth.signOut()} className="rounded-full shadow-sm">
-            <LogOut className="w-4 h-4 mr-2" /> Çıkış Yap
-          </Button>
+          <div className="flex gap-3 items-center">
+            <Link href="/dashboard/settings">
+              <Button variant="outline" className="rounded-full shadow-sm">
+                Hesap Ayarları
+              </Button>
+            </Link>
+            <Button variant="destructive" onClick={() => auth.signOut()} className="rounded-full shadow-sm">
+              <LogOut className="w-4 h-4 mr-2" /> Çıkış Yap
+            </Button>
+          </div>
         </FadeInBlock>
 
         {!user.emailVerified && (
@@ -187,6 +205,53 @@ export default function DashboardPage() {
           </FadeInBlock>
 
         </div>
+
+        {/* SHOWCASE PROJECTS */}
+        <FadeInBlock delay={0.3} className="mt-8 relative">
+           {!user.emailVerified && (
+             <div className="absolute inset-0 z-50 bg-background/50 backdrop-blur-sm rounded-3xl" />
+           )}
+           <div className="bg-card border border-primary/20 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-purple-500/5 pointer-events-none" />
+              <div className="relative z-10 flex justify-between items-start mb-6">
+                 <div>
+                   <h2 className="text-xl font-bold">Vitrin Projelerim</h2>
+                   <p className="text-sm text-muted-foreground">Kendi başına veya ekibinle geliştirdiğin projeleri sergile.</p>
+                 </div>
+                 <Link href="/dashboard/project">
+                   <Button className="rounded-full shadow-md"><Plus className="w-4 h-4 mr-2" /> Yeni Proje Ekle</Button>
+                 </Link>
+              </div>
+
+              {projects.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+                   {projects.map((p) => (
+                     <div key={p.id} className="bg-background rounded-xl overflow-hidden border shadow-sm flex flex-col group">
+                        <div className="h-32 w-full overflow-hidden relative">
+                           {/* eslint-disable-next-line @next/next/no-img-element */}
+                           <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        </div>
+                        <div className="p-4 flex flex-col flex-1">
+                           <h3 className="font-bold text-lg line-clamp-1">{p.title}</h3>
+                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2 flex-1">{p.description}</p>
+                           <div className="flex gap-2 mt-4">
+                             <Link href={`/projects/${p.id}`} className="flex-1">
+                               <Button variant="outline" size="sm" className="w-full rounded-md">Görüntüle</Button>
+                             </Link>
+                             <Button variant="destructive" size="sm" onClick={() => handleDeleteProject(p.id!)} className="flex-1 rounded-md">Sil</Button>
+                           </div>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              ) : (
+                <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center p-8 bg-muted/30 rounded-2xl border border-dashed">
+                  <p className="text-muted-foreground mb-4">Henüz bir proje eklemedin. Projelerini sergileyerek daha fazla dikkat çekebilirsin.</p>
+                </div>
+              )}
+           </div>
+        </FadeInBlock>
+
       </main>
       <Footer />
     </div>

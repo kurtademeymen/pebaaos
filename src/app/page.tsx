@@ -50,9 +50,9 @@ export default function Home() {
                 </HoverCard>
                 <HoverCard>
                   <MagneticWrapper>
-                    <Link href="/matches">
+                    <Link href="/kesfet">
                       <Button variant="secondary" size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full bg-background/80 backdrop-blur-md border hover:bg-muted/80 shadow-sm">
-                        <Search className="mr-2 w-5 h-5 text-primary tracking-tight" /> Eşleşmeleri Keşfet
+                        <Search className="mr-2 w-5 h-5 text-primary tracking-tight" /> Keşfet
                       </Button>
                     </Link>
                   </MagneticWrapper>
@@ -144,9 +144,9 @@ export default function Home() {
                   ))}
                 </ul>
                 <HoverCard className="mt-10 inline-block">
-                  <Link href="/matches">
+                  <Link href="/kesfet">
                     <Button variant="outline" className="rounded-full px-6 h-12 text-md group">
-                      Kayıtlı profillere göz at <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      Ekosistemi Keşfet <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </Link>
                 </HoverCard>

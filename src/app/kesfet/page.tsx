@@ -11,15 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FadeInBlock, StaggerChildren, StaggerItem } from "@/components/MotionWrappers";
-import { getPublicProfiles } from "@/lib/db";
-import { PersonalProfile, TeamProfile } from "@/types";
+import { PersonalProfile, TeamProfile, ShowcaseProject } from "@/types";
+import { onSnapshot, collection, query, where, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Link2 } from "lucide-react";
 
 export default function MatchesPage() {
   const [personalUsers, setPersonalUsers] = useState<PersonalProfile[]>([]);
   const [teamProfiles, setTeamProfiles] = useState<TeamProfile[]>([]);
+  const [projects, setProjects] = useState<ShowcaseProject[]>([]);
   
   const [filteredUsers, setFilteredUsers] = useState<PersonalProfile[]>([]);
   const [filteredTeams, setFilteredTeams] = useState<TeamProfile[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<ShowcaseProject[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,28 +32,49 @@ export default function MatchesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("personal");
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [pRes, tRes] = await Promise.all([
-        getPublicProfiles("personal"),
-        getPublicProfiles("team")
-      ]);
-      setPersonalUsers(pRes as PersonalProfile[]);
-      setFilteredUsers(pRes as PersonalProfile[]);
-      setTeamProfiles(tRes as TeamProfile[]);
-      setFilteredTeams(tRes as TeamProfile[]);
-    } catch (err) {
-      console.error(err);
-      setError("Veriler yüklenirken bir hata oluştu.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchData();
+    setLoading(true);
+    setError(null);
+
+    const qPersonal = query(
+      collection(db, "personalProfiles"),
+      where("isApproved", "==", true),
+      where("isVisible", "==", true)
+    );
+    const unsubPersonal = onSnapshot(qPersonal, (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PersonalProfile));
+      setPersonalUsers(data);
+    }, (err) => console.error("Kişisel profil hatası:", err));
+
+    const qTeam = query(
+      collection(db, "teamProfiles"),
+      where("isApproved", "==", true),
+      where("isVisible", "==", true)
+    );
+    const unsubTeam = onSnapshot(qTeam, (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamProfile));
+      setTeamProfiles(data);
+    }, (err) => console.error("Ekip ilanları hatası:", err));
+
+    const qProj = query(
+      collection(db, "projects"),
+      orderBy("createdAt", "desc")
+    );
+    const unsubProj = onSnapshot(qProj, (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShowcaseProject));
+      setProjects(data);
+      setLoading(false); 
+    }, (err) => {
+      console.error("Projeler hatası:", err);
+      setError("Veriler yüklenirken bir hata oluştu.");
+      setLoading(false);
+    });
+
+    return () => {
+      unsubPersonal();
+      unsubTeam();
+      unsubProj();
+    };
   }, []);
 
   // Filter effect
@@ -75,10 +100,20 @@ export default function MatchesPage() {
       return matchSearch;
     });
     setFilteredTeams(filteredT);
-  }, [searchQuery, personalUsers, teamProfiles]);
+
+    // Filter projects
+    const filteredProj = projects.filter(p => {
+      const matchSearch = !term ||
+        p.title.toLowerCase().includes(term) ||
+        p.description.toLowerCase().includes(term);
+      return matchSearch;
+    });
+    setFilteredProjects(filteredProj);
+  }, [searchQuery, personalUsers, teamProfiles, projects]);
 
   const activeCount = personalUsers.filter(u => u.isActivelyLooking).length;
   const hiringCount = teamProfiles.length;
+  const projectCount = projects.length;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -106,6 +141,10 @@ export default function MatchesPage() {
                   <div className="font-bold text-2xl text-purple-600">{hiringCount}</div>
                   <div className="text-purple-600/80">Açık İlan</div>
                 </div>
+                <div className="bg-green-500/5 border border-green-500/20 shadow-sm px-5 py-3 rounded-2xl text-center">
+                  <div className="font-bold text-2xl text-green-600">{projectCount}</div>
+                  <div className="text-green-600/80">Vitrin Projesi</div>
+                </div>
               </div>
             )}
           </FadeInBlock>
@@ -115,6 +154,7 @@ export default function MatchesPage() {
               <TabsList className="bg-muted p-1">
                 <TabsTrigger value="personal" className="px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md font-medium">Öğrenciler / Bireyler</TabsTrigger>
                 <TabsTrigger value="team" className="px-6 data-[state=active]:bg-background data-[state=active]:text-purple-600 data-[state=active]:shadow-sm rounded-md font-medium">Projeler / Ekipler</TabsTrigger>
+                <TabsTrigger value="projects" className="px-6 data-[state=active]:bg-background data-[state=active]:text-green-600 data-[state=active]:shadow-sm rounded-md font-medium">Vitrin</TabsTrigger>
               </TabsList>
               
               <div className="w-full md:w-auto md:min-w-[300px]">
@@ -133,7 +173,9 @@ export default function MatchesPage() {
                    {[1, 2, 3, 4, 5, 6].map(i => <UserCardSkeleton key={i} />)}
                 </div>
               ) : error ? (
-                <ErrorState error={error} onRetry={fetchData} />
+                <div className="p-8 text-center bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 font-medium">
+                  {error}
+                </div>
               ) : (
                 <>
                   <TabsContent value="personal" className="m-0 focus-visible:outline-none">
@@ -158,6 +200,38 @@ export default function MatchesPage() {
                         {filteredTeams.map((team) => (
                           <StaggerItem key={team.id}>
                             <TeamCard team={team} />
+                          </StaggerItem>
+                        ))}
+                      </StaggerChildren>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="projects" className="m-0 focus-visible:outline-none">
+                    {filteredProjects.length === 0 ? (
+                      <EmptyState title="Vitrin Projesi Bulunamadı" description="Şu an için aradığınız kriterlere uygun bir proje yok."/>
+                    ) : (
+                      <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredProjects.map((proj) => (
+                          <StaggerItem key={proj.id} className="bg-card border rounded-2xl overflow-hidden shadow-md flex flex-col hover:shadow-xl transition-all group">
+                             <div className="h-48 w-full overflow-hidden relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={proj.imageUrl} alt={proj.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                             </div>
+                             <div className="p-6 flex flex-col flex-1 relative -mt-10 bg-card rounded-t-2xl z-10 pt-5 border-t">
+                                <h3 className="font-bold text-xl mb-2">{proj.title}</h3>
+                                <p className="text-sm text-muted-foreground flex-1 line-clamp-3">{proj.description}</p>
+                                <div className="flex items-center justify-between mt-4">
+                                  <a href={`/projects/${proj.id}`} className="text-sm font-bold text-primary flex items-center hover:underline">
+                                     Detayları Gör
+                                  </a>
+                                  {proj.projectUrl && (
+                                    <a href={proj.projectUrl.startsWith('http') ? proj.projectUrl : `https://${proj.projectUrl}`} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-muted-foreground flex items-center hover:text-primary transition-colors">
+                                       <Link2 className="w-4 h-4 mr-1" /> Dış Bağlantı
+                                    </a>
+                                  )}
+                                </div>
+                             </div>
                           </StaggerItem>
                         ))}
                       </StaggerChildren>

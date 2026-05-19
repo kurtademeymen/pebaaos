@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/components/AuthProvider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const sansFont = Plus_Jakarta_Sans({
@@ -39,6 +40,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
+            <Toaster richColors position="bottom-right" theme="system" />
           </AuthProvider>
         </ThemeProvider>
       </body>
